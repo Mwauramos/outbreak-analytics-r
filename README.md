@@ -68,7 +68,7 @@ outbreak-analytics-r/
 └── README.md                     # This file
 ```
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
