@@ -6,11 +6,11 @@
 
 > A comprehensive R toolkit for epidemiological outbreak data analysis, from data ingestion to visualization.
 
-## 🎯 Overview
+## Overview
 
 This project provides a complete pipeline for analyzing outbreak and epidemic data using modern R packages from the [Epiverse-TRACE](https://epiverse-trace.github.io/) ecosystem. It demonstrates best practices for reading, cleaning, validating, and visualizing epidemiological data in emergency response situations.
 
-## ✨ Features
+## Features
 
 - **Multi-source Data Import**: Read from files, databases, and Health Information Systems (HIS)
 - **Automated Data Cleaning**: Standardize dates, handle missing values, validate IDs
@@ -18,7 +18,7 @@ This project provides a complete pipeline for analyzing outbreak and epidemic da
 - **Advanced Visualization**: Create epidemic curves and time-series analysis
 - **Reproducible Workflows**: Complete pipeline from raw data to publication-ready figures
 
-## 🛠 Technologies Used
+## Technologies Used
 
 ### Core R Packages
 - **Data Import**: `readepi`, `rio`, `DBI`, `dbplyr`
@@ -33,7 +33,7 @@ This project provides a complete pipeline for analyzing outbreak and epidemic da
 - **MySQL/PostgreSQL** database connectivity
 - **REDCap** API support
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 outbreak-analytics-r/
@@ -172,7 +172,7 @@ combined_data <- harmonize_data_sources(
 )
 ```
 
-## 📈 Key Features Demonstrated
+## Key Features Demonstrated
 
 ### Data Import Capabilities
 - **File formats**: CSV, Excel, TSV, compressed files
@@ -199,7 +199,7 @@ combined_data <- harmonize_data_sources(
 - **Peak estimation**: Bootstrap confidence intervals
 - **Custom themes**: Publication-ready formatting
 
-## 🧪 Testing
+## Testing
 
 Run the test suite to validate functionality:
 
@@ -212,7 +212,7 @@ testthat::test_file("tests/test_data_import.R")
 testthat::test_file("tests/test_data_cleaning.R")
 ```
 
-## 📋 Use Cases
+## Use Cases
 
 This toolkit is designed for:
 
@@ -222,7 +222,7 @@ This toolkit is designed for:
 - **Data scientists** working with health data
 - **Students** learning epidemiological data analysis
 
-## 🤝 Contributing
+## Contributing
 
 Contributions are welcome! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details.
 
@@ -232,7 +232,7 @@ Contributions are welcome! Please see our [Contributing Guidelines](CONTRIBUTING
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-## 📚 Documentation
+## Documentation
 
 Detailed documentation is available in the `tutorials/` directory:
 
@@ -242,28 +242,27 @@ Detailed documentation is available in the `tutorials/` directory:
 - [Validation Framework](tutorials/04_validation.md)
 - [Visualization Techniques](tutorials/05_visualization.md)
 
-## 🔗 Related Projects
+## Related Projects
 
 - [Epiverse-TRACE](https://epiverse-trace.github.io/) - R packages for outbreak analytics
 - [R4Epis](https://r4epis.netlify.app/) - R for applied epidemiology
 - [The Epidemiologist R Handbook](https://epirhandbook.com/) - Comprehensive R guide
 
-## 📄 License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - [Epiverse-TRACE](https://epiverse-trace.github.io/) for the foundational packages
 - [The Carpentries](https://carpentries.org/) for the tutorial framework
 - Contributors to the R epidemiology ecosystem
 
-## 📞 Contact
+## Contact
 
 **Amos Mwaura**  
-📧 Email: [your.email@example.com](mailto:your.email@example.com)  
-🐙 GitHub: [@Mwauramos](https://github.com/Mwauramos)  
-💼 LinkedIn: [Amos Mwaura](https://linkedin.com/in/amos-mwaura)
+📧 Email: mwauramos.n@gmail.com  
+
 
 ---
 
