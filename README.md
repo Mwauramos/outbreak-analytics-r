@@ -1,271 +1,215 @@
-# Outbreak Analytics with R
+# Outbreak Analytics in R
 
-[![R](https://img.shields.io/badge/R-276DC3?style=flat&logo=r&logoColor=white)](https://www.r-project.org/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![GitHub Issues](https://img.shields.io/github/issues/Mwauramos/outbreak-analytics-r)](https://github.com/Mwauramos/outbreak-analytics-r/issues)
+A comprehensive, production-ready data analysis pipeline for epidemiological outbreak investigation and surveillance using modern R packages.
 
-> A comprehensive R toolkit for epidemiological outbreak data analysis, from data ingestion to visualization.
+[![R](https://img.shields.io/badge/R-276DC3?style=for-the-badge&logo=r&logoColor=white)](https://www.r-project.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
+[![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg?style=for-the-badge)](https://GitHub.com/Mwauramos/outbreak-analytics-r/graphs/commit-activity)
 
 ## Overview
 
-This project provides a complete pipeline for analyzing outbreak and epidemic data using modern R packages from the [Epiverse-TRACE](https://epiverse-trace.github.io/) ecosystem. It demonstrates best practices for reading, cleaning, validating, and visualizing epidemiological data in emergency response situations.
+This project demonstrates a complete outbreak analytics workflow from raw data import through professional visualization. The pipeline handles real-world data quality issues, performs comprehensive validation, and generates publication-ready outputs suitable for epidemiological analysis and public health decision-making.
 
-## Features
+## Key Features
 
-- **Multi-source Data Import**: Read from files, databases, and Health Information Systems (HIS)
-- **Automated Data Cleaning**: Standardize dates, handle missing values, validate IDs
-- **Data Validation Framework**: Tag and safeguard critical epidemiological variables
-- **Advanced Visualization**: Create epidemic curves and time-series analysis
-- **Reproducible Workflows**: Complete pipeline from raw data to publication-ready figures
-
-## Technologies Used
-
-### Core R Packages
-- **Data Import**: `readepi`, `rio`, `DBI`, `dbplyr`
-- **Data Cleaning**: `cleanepi`, `tidyverse`
-- **Data Validation**: `linelist`
-- **Visualization**: `incidence2`, `ggplot2`, `tracetheme`
-- **Simulation**: `simulist`
-
-### External Systems
-- **DHIS2** integration for health information systems
-- **SORMAS** compatibility for surveillance data
-- **MySQL/PostgreSQL** database connectivity
-- **REDCap** API support
-
-## Project Structure
-
-```
-outbreak-analytics-r/
-├── data/                           # Sample datasets
-│   ├── raw/                       # Raw outbreak data files
-│   ├── cleaned/                   # Processed data outputs
-│   └── simulated/                 # Generated test datasets
-├── R/                             # Core analysis functions
-│   ├── 01_data_import.R          # Multi-source data reading
-│   ├── 02_data_cleaning.R        # Cleaning and standardization
-│   ├── 03_data_validation.R      # Linelist creation and validation
-│   ├── 04_visualization.R        # Epidemic curve generation
-│   └── utils.R                   # Helper functions
-├── scripts/                       # Analysis workflows
-│   ├── complete_pipeline.R       # End-to-end analysis
-│   ├── ebola_analysis.R          # Ebola case study
-│   └── marburg_analysis.R        # Marburg outbreak example
-├── outputs/                       # Generated reports and figures
-│   ├── figures/                  # Epidemic curves and plots
-│   ├── reports/                  # HTML cleaning reports
-│   └── tables/                   # Summary statistics
-├── tutorials/                     # Step-by-step guides
-│   ├── 01_setup.md              # Environment setup
-│   ├── 02_reading_data.md       # Data import tutorial
-│   ├── 03_cleaning_data.md      # Data cleaning guide
-│   ├── 04_validation.md         # Validation framework
-│   └── 05_visualization.md      # Visualization techniques
-├── tests/                        # Unit tests and validation
-├── renv.lock                     # Package dependency management
-├── DESCRIPTION                   # R package metadata
-├── NAMESPACE                     # Package exports
-└── README.md                     # This file
-```
+- **Complete Pipeline**: End-to-end analysis from data import to interactive visualizations
+- **Robust Error Handling**: Graceful handling of missing packages and data quality issues
+- **Industry Standard**: Uses specialized epidemiological packages (`cleanepi`, `linelist`, `incidence2`)
+- **Professional Outputs**: Publication-ready visualizations and comprehensive reports
+- **Interactive Elements**: HTML dashboards and searchable data tables
+- **Reproducible**: Fully documented with consistent project structure
 
 ## Quick Start
 
 ### Prerequisites
 
-- R (≥ 4.0.0)
-- RStudio (recommended)
-- Git
+```r
+# Essential packages
+install.packages(c("tidyverse", "rio", "here"))
 
-### Installation
+# Recommended epidemiology packages
+install.packages(c("cleanepi", "linelist", "incidence2", "janitor"))
 
-1. **Clone the repository**
+# Optional for enhanced features
+install.packages(c("plotly", "DT", "patchwork", "scales"))
+```
+
+### Usage
+
+1. Clone this repository:
 ```bash
 git clone https://github.com/Mwauramos/outbreak-analytics-r.git
 cd outbreak-analytics-r
 ```
 
-2. **Install dependencies**
-```r
-# Install renv for dependency management
-install.packages("renv")
-renv::restore()
+2. Open R/RStudio in the project directory
 
-# Or install packages manually
-source("R/install_packages.R")
+3. Run the complete pipeline:
+```r
+source('complete_outbreak_pipeline.R')
 ```
 
-3. **Set up project structure**
-```r
-# Create necessary directories
-source("R/setup_project.R")
+4. Check outputs in the `outputs/` directory
+
+## Sample Outputs
+
+### Epidemic Curves
+![Daily Epidemic Curve](outputs/plots/01_daily_epicurve.png)
+
+### Demographic Analysis
+![Age Distribution](outputs/plots/05_age_histogram.png)
+![Gender Distribution](outputs/plots/07_gender_bar.png)
+
+### Summary Dashboard
+![Summary Dashboard](outputs/plots/10_summary_dashboard.png)
+
+## 📁 Project Structure
+
+```
+outbreak-analytics-r/
+├── complete_outbreak_pipeline.R    # Main analysis script
+├── data/
+│   ├── raw/                        # Raw data files
+│   └── processed/                  # Cleaned datasets
+├── outputs/
+│   ├── plots/                      # Generated visualizations
+│   ├── interactive_data_table.html # Searchable case data
+│   ├── interactive_epicurve.html   # Interactive epidemic curve
+│   └── pipeline_summary.txt        # Analysis summary
+├── README.md
+└── LICENSE
 ```
 
-### Basic Usage
+## Pipeline Components
 
-```r
-# Load the project functions
-source("R/utils.R")
+### 1. Data Import & Simulation
+- Imports data from CSV, Excel, ZIP files
+- Database connectivity (MySQL, PostgreSQL, SQLite)
+- Generates realistic outbreak data when real data unavailable
+- Comprehensive error handling and validation
 
-# Complete analysis pipeline
-source("scripts/complete_pipeline.R")
+### 2. Data Cleaning
+- Column name standardization using `cleanepi`
+- Duplicate and constant column removal
+- Missing value standardization
+- Text-to-number conversion (e.g., "twenty" → 20)
+- Date standardization and validation
 
-# Or run individual components
-source("R/01_data_import.R")    # Import data
-source("R/02_data_cleaning.R")  # Clean and standardize
-source("R/03_data_validation.R") # Validate and tag
-source("R/04_visualization.R")   # Generate visualizations
-```
+### 3. Data Validation
+- Creates validated linelist objects with epidemiological tagging
+- Comprehensive quality checks (ID uniqueness, age validity, date ranges)
+- Missing data analysis with detailed reporting
+- Safeguarding against accidental data loss
 
-## 📊 Example Workflows
+### 4. Visualization & Analysis
+- Professional epidemic curves (daily, weekly, cumulative)
+- Demographic breakdowns (age, gender, geographic)
+- Cross-tabulation heatmaps
+- Attack rates and epidemiological indicators
+- Interactive dashboards and data tables
 
-### 1. Ebola Outbreak Analysis
+## 📈 Analysis Capabilities
 
-```r
-# Read Ebola case data
-ebola_raw <- read_outbreak_data(
-  file = "data/raw/ebola_cases.csv",
-  type = "csv"
-)
+- **Temporal Analysis**: Epidemic curves with peak detection
+- **Demographic Analysis**: Age-sex pyramids and distributions  
+- **Geographic Analysis**: Regional outbreak patterns
+- **Clinical Analysis**: Case status and outcome tracking
+- **Quality Assessment**: Missing data patterns and validation metrics
 
-# Clean and standardize
-ebola_clean <- clean_outbreak_data(
-  data = ebola_raw,
-  date_columns = c("date_onset", "date_sample"),
-  id_column = "case_id"
-)
+## Technical Specifications
 
-# Create linelist object
-ebola_linelist <- create_linelist(
-  data = ebola_clean,
-  id = "case_id",
-  date_onset = "date_onset",
-  gender = "gender"
-)
+### Core Dependencies
+- **R** >= 4.0.0
+- **tidyverse**: Data manipulation and visualization
+- **rio**: Universal data import/export
+- **here**: Reproducible file paths
 
-# Generate epidemic curve
-plot_epidemic_curve(
-  data = ebola_linelist,
-  date_column = "date_onset",
-  interval = "week"
-)
-```
+### Specialized Epidemiology Packages
+- **cleanepi**: Epidemic data cleaning and standardization
+- **linelist**: Case data validation and tagging
+- **incidence2**: Epidemic curve analysis and visualization
 
-### 2. Multi-source Data Integration
+### Optional Enhancements
+- **plotly**: Interactive visualizations
+- **DT**: Interactive data tables
+- **patchwork**: Multi-panel figure composition
 
-```r
-# Read from different sources
-dhis2_data <- read_dhis2_data(
-  url = "https://example.dhis2.org",
-  program = "outbreak_surveillance"
-)
+## Learning Outcomes
 
-database_data <- read_database_data(
-  connection = db_connection,
-  table = "case_reports"
-)
+This project demonstrates proficiency in:
 
-file_data <- read_file_data("data/raw/cases.xlsx")
-
-# Combine and harmonize
-combined_data <- harmonize_data_sources(
-  dhis2_data, database_data, file_data
-)
-```
-
-## Key Features Demonstrated
-
-### Data Import Capabilities
-- **File formats**: CSV, Excel, TSV, compressed files
-- **Databases**: MySQL, PostgreSQL, SQLite, SQL Server  
-- **APIs**: DHIS2, SORMAS, REDCap integration
-- **Cross-platform compatibility** with `here` package
-
-### Data Cleaning Pipeline
-- **Column standardization**: Automated naming conventions
-- **Missing value handling**: Multiple encoding detection
-- **Date standardization**: ISO format conversion
-- **Duplicate detection**: Advanced deduplication algorithms
-- **Data type conversion**: Text-to-numeric with multi-language support
-
-### Validation Framework
-- **Linelist objects**: Tagged epidemiological variables
-- **Data integrity**: Safeguarding against accidental deletion
-- **Type validation**: Automatic data type checking
-- **Sequence validation**: Date logic verification
-
-### Visualization Tools
-- **Epidemic curves**: Daily, weekly, monthly aggregation
-- **Stratified analysis**: By demographics and case characteristics
-- **Peak estimation**: Bootstrap confidence intervals
-- **Custom themes**: Publication-ready formatting
-
-## Testing
-
-Run the test suite to validate functionality:
-
-```r
-# Run all tests
-testthat::test_dir("tests/")
-
-# Test specific components
-testthat::test_file("tests/test_data_import.R")
-testthat::test_file("tests/test_data_cleaning.R")
-```
+- **R Programming**: Advanced data manipulation, visualization, and package development
+- **Epidemiological Analysis**: Outbreak investigation methodologies and best practices
+- **Data Quality Management**: Validation, cleaning, and standardization workflows
+- **Reproducible Research**: Project organization, documentation, and version control
+- **Public Health Informatics**: Integration of multiple data sources and systems
 
 ## Use Cases
 
-This toolkit is designed for:
-
-- **Emergency response teams** conducting outbreak investigations
-- **Epidemiologists** analyzing surveillance data
-- **Public health researchers** studying disease patterns
-- **Data scientists** working with health data
-- **Students** learning epidemiological data analysis
+- **Outbreak Investigation**: Real-time analysis of disease outbreaks
+- **Surveillance Systems**: Routine monitoring of disease patterns
+- **Academic Research**: Epidemiological studies and publications
+- **Training & Education**: Teaching outbreak analytics methodologies
+- **Portfolio Development**: Demonstrating data science capabilities
 
 ## Contributing
 
-Contributions are welcome! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details.
+Contributions are welcome! Please feel free to:
 
 1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+2. Create a feature branch (`git checkout -b feature/enhancement`)
+3. Commit changes (`git commit -am 'Add new feature'`)
+4. Push to branch (`git push origin feature/enhancement`)
+5. Create a Pull Request
 
-## Documentation
+## Data Requirements
 
-Detailed documentation is available in the `tutorials/` directory:
+The pipeline works with standard epidemiological datasets containing:
 
-- [Environment Setup](tutorials/01_setup.md)
-- [Data Import Guide](tutorials/02_reading_data.md)  
-- [Data Cleaning Workflow](tutorials/03_cleaning_data.md)
-- [Validation Framework](tutorials/04_validation.md)
-- [Visualization Techniques](tutorials/05_visualization.md)
+- **Case identifiers**: Unique case IDs
+- **Demographics**: Age, gender/sex
+- **Temporal data**: Date of onset, reporting dates
+- **Geographic data**: Region, district, coordinates
+- **Clinical data**: Case classification, outcomes
+- **Laboratory data**: Test results, confirmation status
 
-## Related Projects
+### Example Data Format
+```csv
+case_id,age,gender,date_onset,date_sample,status,region
+1001,25,female,2023-01-15,2023-01-17,confirmed,North
+1002,34,male,2023-01-16,2023-01-18,probable,South
+```
 
-- [Epiverse-TRACE](https://epiverse-trace.github.io/) - R packages for outbreak analytics
-- [R4Epis](https://r4epis.netlify.app/) - R for applied epidemiology
-- [The Epidemiologist R Handbook](https://epirhandbook.com/) - Comprehensive R guide
+## Known Limitations
+
+- Interactive features require additional packages (`plotly`, `DT`)
+- Database connectivity depends on appropriate drivers
+- Large datasets (>10,000 cases) may require memory optimization
+- Some visualizations optimized for outbreaks <2,000 cases
+
+## References
+
+- [Epiverse Initiative](https://data.org/initiatives/epiverse/) - Epidemiological analysis ecosystem
+- [R Epidemics Consortium (RECON)](https://www.repidemicsconsortium.org/) - Outbreak analysis tools
+- [WHO Outbreak Investigation Guidelines](https://www.who.int/emergencies/outbreak-toolkit)
 
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
+## Author
+
+**Amos Mwaura**
+- GitHub: [@Mwauramos](https://github.com/Mwauramos)
+- LinkedIn: [Amos Mwaura](https://linkedin.com/in/amos-mwaura)
+- Email: [contact information]
+
 ## Acknowledgments
 
-- [Epiverse-TRACE](https://epiverse-trace.github.io/) for the foundational packages
-- [The Carpentries](https://carpentries.org/) for the tutorial framework
-- Contributors to the R epidemiology ecosystem
-
-## Contact
-
-**Amos Mwaura**  
-📧 Email: mwauramos.n@gmail.com  
-
+- **Epiverse Initiative** for developing specialized epidemiological R packages
+- **R Community** for the robust ecosystem of data analysis tools
+- **Public Health Community** for outbreak investigation methodologies and best practices
 
 ---
 
-⭐ **Star this repository if you find it useful!**
-
-*Built with ❤️ for the global health community*
+*This project demonstrates advanced R programming, epidemiological analysis, and data science capabilities suitable for public health, research, and data science roles.*
