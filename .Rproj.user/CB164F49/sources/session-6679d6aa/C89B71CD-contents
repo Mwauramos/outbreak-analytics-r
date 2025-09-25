@@ -1,0 +1,991 @@
+# ==============================================================================
+# OUTBREAK ANALYTICS IN R - DATA VISUALIZATION
+# ==============================================================================
+# Project: Outbreak Data Analysis Pipeline
+# Author: Amos Mwaura
+# Date: 2025
+# Description: Create comprehensive visualizations for outbreak data analysis
+# ==============================================================================
+
+# Load required packages
+library(tidyverse)    # For data manipulation and ggplot2
+library(incidence2)   # For epidemic curve creation
+library(simulist)     # For outbreak data simulation if needed
+library(tracetheme)   # For custom plotting themes
+library(scales)       # For plot scaling
+library(patchwork)    # For combining plots
+library(RColorBrewer) # For color palettes
+library(viridis)      # For viridis color palette
+library(plotly)       # For interactive plots
+library(DT)           # For interactive tables
+library(here)         # For file paths
+library(linelist)     # For linelist operations
+
+# ==============================================================================
+# SECTION 1: SETUP AND DATA LOADING
+# ==============================================================================
+
+cat("=== OUTBREAK DATA VISUALIZATION WORKFLOW ===\n\n")
+
+# Define paths
+processed_data_path <- here("data", "processed")
+outputs_path <- here("outputs", "plots")
+validated_linelist_file <- file.path(processed_data_path, "validated_linelist.rds")
+
+# Create outputs directory if it doesn't exist
+if (!dir.exists(outputs_path)) dir.create(outputs_path, recursive = TRUE)
+
+# Load validated data from previous step
+if (file.exists(validated_linelist_file)) {
+  cat("Loading validated outbreak data...\n")
+  validated_data <- readRDS(validated_linelist_file)
+  outbreak_data <- as_tibble(validated_data)
+  cat("Data loaded successfully!\n")
+  cat("Dimensions:", nrow(outbreak_data), "rows x", ncol(outbreak_data), "columns\n\n")
+} else {
+  # If validated data not available, simulate some data for demonstration
+  cat("Validated data not found. Creating demonstration data...\n")
+  set.seed(123)
+  outbreak_data <- simulist::sim_linelist(outbreak_size = c(800, 1200)) %>%
+    as_tibble()
+  cat("Demonstration data created!\n\n")
+}
+
+# ==============================================================================
+# SECTION 2: DATA PREPARATION FOR VISUALIZATION
+# ==============================================================================
+
+#' Prepare data for visualization
+#' 
+#' @param data The outbreak dataset
+#' @return Prepared dataset with proper data types
+prepare_visualization_data <- function(data) {
+  cat("=== PREPARING DATA FOR VISUALIZATION ===\n")
+  
+  # Ensure proper data types
+  prepared_data <- data
+  
+  # Convert date columns
+  date_cols <- names(prepared_data)[grepl("date", names(prepared_data), ignore.case = TRUE)]
+  for (col in date_cols) {
+    if (col %in% names(prepared_data)) {
+      prepared_data[[col]] <- as.Date(prepared_data[[col]])
+    }
+  }
+  
+  # Standardize categorical variables
+  if ("gender" %in% names(prepared_data) || "sex" %in% names(prepared_data)) {
+    gender_col <- ifelse("gender" %in% names(prepared_data), "gender", "sex")
+    prepared_data[[gender_col]] <- factor(prepared_data[[gender_col]], 
+                                          levels = c("male", "female", "m", "f"),
+                                          labels = c("Male", "Female", "Male", "Female"))
+  }
+  
+  # Create age groups if age is available
+  if ("age" %in% names(prepared_data)) {
+    prepared_data <- prepared_data %>%
+      mutate(
+        age_group = case_when(
+          age < 5 ~ "0-4",
+          age < 15 ~ "5-14",
+          age < 25 ~ "15-24",
+          age < 45 ~ "25-44",
+          age < 65 ~ "45-64",
+          age >= 65 ~ "65+",
+          TRUE ~ "Unknown"
+        ),
+        age_group = factor(age_group, 
+                           levels = c("0-4", "5-14", "15-24", "25-44", "45-64", "65+", "Unknown"))
+      )
+  }
+  
+  # Standardize case status
+  if ("status" %in% names(prepared_data) || "case_type" %in% names(prepared_data)) {
+    status_col <- ifelse("status" %in% names(prepared_data), "status", "case_type")
+    prepared_data[[status_col]] <- factor(prepared_data[[status_col]])
+  }
+  
+  cat("Data preparation completed!\n")
+  cat("Available columns for visualization:\n")
+  print(names(prepared_data))
+  cat("\n")
+  
+  return(prepared_data)
+}
+
+# Prepare data
+viz_data <- prepare_visualization_data(outbreak_data)
+
+# ==============================================================================
+# SECTION 3: EPIDEMIC CURVES
+# ==============================================================================
+
+#' Create epidemic curves (epicurves)
+#' 
+#' @param data The outbreak dataset
+#' @return List of epidemic curve plots
+create_epidemic_curves <- function(data) {
+  cat("=== CREATING EPIDEMIC CURVES ===\n")
+  
+  plots <- list()
+  
+  # Determine date column for incidence
+  date_col <- "date_onset"
+  if (!"date_onset" %in% names(data) && "date_reporting" %in% names(data)) {
+    date_col <- "date_reporting"
+  } else if (!"date_onset" %in% names(data) && !("date_reporting" %in% names(data))) {
+    # Use any available date column
+    date_cols <- names(data)[sapply(data, function(x) inherits(x, "Date"))]
+    if (length(date_cols) > 0) {
+      date_col <- date_cols[1]
+    } else {
+      cat("No date columns found for epidemic curve creation.\n")
+      return(plots)
+    }
+  }
+  
+  cat("Using date column:", date_col, "\n")
+  
+  # 1. Daily epidemic curve
+  cat("Creating daily epidemic curve...\n")
+  daily_incidence <- incidence2::incidence(
+    data,
+    date_index = date_col,
+    interval = "day",
+    complete_dates = TRUE
+  )
+  
+  plots$daily_epicurve <- plot(daily_incidence) +
+    labs(
+      title = "Daily Epidemic Curve",
+      subtitle = paste("Outbreak cases by", date_col),
+      x = "Date",
+      y = "Number of Cases",
+      caption = paste("Total cases:", nrow(data))
+    ) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+      plot.subtitle = element_text(size = 12, hjust = 0.5),
+      axis.text.x = element_text(angle = 45, hjust = 1),
+      panel.grid.minor = element_blank()
+    )
+  
+  # 2. Weekly epidemic curve
+  cat("Creating weekly epidemic curve...\n")
+  weekly_incidence <- incidence2::incidence(
+    data,
+    date_index = date_col,
+    interval = "week",
+    complete_dates = TRUE
+  )
+  
+  plots$weekly_epicurve <- plot(weekly_incidence) +
+    labs(
+      title = "Weekly Epidemic Curve",
+      subtitle = paste("Outbreak cases by week of", date_col),
+      x = "Week",
+      y = "Number of Cases",
+      caption = paste("Total cases:", nrow(data))
+    ) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+      plot.subtitle = element_text(size = 12, hjust = 0.5),
+      axis.text.x = element_text(angle = 45, hjust = 1),
+      panel.grid.minor = element_blank()
+    )
+  
+  # 3. Epidemic curve by gender (if available)
+  gender_col <- ifelse("gender" %in% names(data), "gender", 
+                       ifelse("sex" %in% names(data), "sex", NA))
+  
+  if (!is.na(gender_col) && sum(!is.na(data[[gender_col]])) > 0) {
+    cat("Creating epidemic curve by gender...\n")
+    gender_incidence <- incidence2::incidence(
+      data,
+      date_index = date_col,
+      groups = gender_col,
+      interval = "week",
+      complete_dates = TRUE
+    )
+    
+    plots$gender_epicurve <- plot(gender_incidence, fill = gender_col) +
+      labs(
+        title = "Weekly Epidemic Curve by Gender",
+        subtitle = paste("Outbreak cases by gender and week of", date_col),
+        x = "Week",
+        y = "Number of Cases",
+        fill = "Gender",
+        caption = paste("Total cases:", nrow(data))
+      ) +
+      scale_fill_brewer(palette = "Set2") +
+      theme_minimal() +
+      theme(
+        plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+        plot.subtitle = element_text(size = 12, hjust = 0.5),
+        axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "bottom",
+        panel.grid.minor = element_blank()
+      )
+  }
+  
+  # 4. Cumulative epidemic curve
+  cat("Creating cumulative epidemic curve...\n")
+  cumulative_incidence <- incidence2::cumulate(daily_incidence)
+  
+  plots$cumulative_epicurve <- plot(cumulative_incidence) +
+    labs(
+      title = "Cumulative Cases Over Time",
+      subtitle = paste("Cumulative outbreak cases by", date_col),
+      x = "Date",
+      y = "Cumulative Number of Cases",
+      caption = paste("Total cases:", nrow(data))
+    ) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+      plot.subtitle = element_text(size = 12, hjust = 0.5),
+      axis.text.x = element_text(angle = 45, hjust = 1),
+      panel.grid.minor = element_blank()
+    )
+  
+  # 5. Peak estimation
+  cat("Estimating epidemic peak...\n")
+  tryCatch({
+    peak_estimate <- incidence2::estimate_peak(
+      daily_incidence,
+      n = 100,
+      alpha = 0.05,
+      first_only = TRUE,
+      progress = FALSE
+    )
+    
+    plots$peak_info <- peak_estimate
+    cat("Peak estimated at:", as.character(peak_estimate$observed_peak), "\n")
+  }, error = function(e) {
+    cat("Could not estimate peak:", e$message, "\n")
+    plots$peak_info <- NULL
+  })
+  
+  cat("Epidemic curves created successfully!\n\n")
+  return(plots)
+}
+
+# Create epidemic curves
+epicurve_plots <- create_epidemic_curves(viz_data)
+
+# ==============================================================================
+# SECTION 4: DEMOGRAPHIC ANALYSIS PLOTS
+# ==============================================================================
+
+#' Create demographic analysis visualizations
+#' 
+#' @param data The outbreak dataset
+#' @return List of demographic plots
+create_demographic_plots <- function(data) {
+  cat("=== CREATING DEMOGRAPHIC ANALYSIS PLOTS ===\n")
+  
+  plots <- list()
+  
+  # 1. Age distribution
+  if ("age" %in% names(data)) {
+    cat("Creating age distribution plot...\n")
+    
+    # Histogram of age distribution
+    plots$age_histogram <- ggplot(data, aes(x = age)) +
+      geom_histogram(bins = 20, fill = "steelblue", alpha = 0.7, color = "white") +
+      labs(
+        title = "Age Distribution of Cases",
+        subtitle = paste("Distribution of", sum(!is.na(data$age)), "cases with known age"),
+        x = "Age (years)",
+        y = "Number of Cases"
+      ) +
+      theme_minimal() +
+      theme(
+        plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+        plot.subtitle = element_text(size = 12, hjust = 0.5),
+        panel.grid.minor = element_blank()
+      )
+    
+    # Age group distribution (if age groups created)
+    if ("age_group" %in% names(data)) {
+      plots$age_group_bar <- ggplot(data, aes(x = age_group)) +
+        geom_bar(fill = "darkgreen", alpha = 0.7) +
+        labs(
+          title = "Cases by Age Group",
+          subtitle = "Distribution across age categories",
+          x = "Age Group",
+          y = "Number of Cases"
+        ) +
+        theme_minimal() +
+        theme(
+          plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+          plot.subtitle = element_text(size = 12, hjust = 0.5),
+          axis.text.x = element_text(angle = 45, hjust = 1),
+          panel.grid.minor = element_blank()
+        )
+    }
+  }
+  
+  # 2. Gender distribution
+  gender_col <- ifelse("gender" %in% names(data), "gender", 
+                       ifelse("sex" %in% names(data), "sex", NA))
+  
+  if (!is.na(gender_col) && sum(!is.na(data[[gender_col]])) > 0) {
+    cat("Creating gender distribution plots...\n")
+    
+    # Bar chart
+    plots$gender_bar <- ggplot(data, aes(x = .data[[gender_col]])) +
+      geom_bar(fill = "purple", alpha = 0.7) +
+      labs(
+        title = "Cases by Gender",
+        subtitle = paste("Distribution of", sum(!is.na(data[[gender_col]])), "cases with known gender"),
+        x = "Gender",
+        y = "Number of Cases"
+      ) +
+      theme_minimal() +
+      theme(
+        plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+        plot.subtitle = element_text(size = 12, hjust = 0.5),
+        panel.grid.minor = element_blank()
+      )
+    
+    # Pie chart
+    gender_counts <- data %>%
+      filter(!is.na(.data[[gender_col]])) %>%
+      count(.data[[gender_col]], name = "count") %>%
+      mutate(percentage = round(count / sum(count) * 100, 1))
+    
+    plots$gender_pie <- ggplot(gender_counts, aes(x = "", y = count, fill = .data[[gender_col]])) +
+      geom_col() +
+      coord_polar("y", start = 0) +
+      geom_text(aes(label = paste0(percentage, "%")), 
+                position = position_stack(vjust = 0.5)) +
+      labs(
+        title = "Gender Distribution (Percentage)",
+        fill = "Gender"
+      ) +
+      theme_void() +
+      theme(
+        plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+        legend.position = "bottom"
+      ) +
+      scale_fill_brewer(palette = "Set2")
+  }
+  
+  # 3. Case status distribution (if available)
+  status_col <- ifelse("status" %in% names(data), "status", 
+                       ifelse("case_type" %in% names(data), "case_type", NA))
+  
+  if (!is.na(status_col) && sum(!is.na(data[[status_col]])) > 0) {
+    cat("Creating case status distribution plot...\n")
+    
+    plots$status_bar <- ggplot(data, aes(x = .data[[status_col]])) +
+      geom_bar(aes(fill = .data[[status_col]]), alpha = 0.8) +
+      labs(
+        title = "Cases by Status",
+        subtitle = paste("Classification of", sum(!is.na(data[[status_col]])), "cases"),
+        x = "Case Status",
+        y = "Number of Cases",
+        fill = "Status"
+      ) +
+      theme_minimal() +
+      theme(
+        plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+        plot.subtitle = element_text(size = 12, hjust = 0.5),
+        axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "none",
+        panel.grid.minor = element_blank()
+      ) +
+      scale_fill_viridis_d()
+  }
+  
+  # 4. Geographic distribution (if available)
+  if ("region" %in% names(data) || "location" %in% names(data)) {
+    location_col <- ifelse("region" %in% names(data), "region", "location")
+    cat("Creating geographic distribution plot...\n")
+    
+    plots$location_bar <- ggplot(data, aes(x = .data[[location_col]])) +
+      geom_bar(fill = "orange", alpha = 0.7) +
+      labs(
+        title = "Cases by Region",
+        subtitle = paste("Geographic distribution of", sum(!is.na(data[[location_col]])), "cases"),
+        x = "Region",
+        y = "Number of Cases"
+      ) +
+      theme_minimal() +
+      theme(
+        plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+        plot.subtitle = element_text(size = 12, hjust = 0.5),
+        axis.text.x = element_text(angle = 45, hjust = 1),
+        panel.grid.minor = element_blank()
+      )
+  }
+  
+  cat("Demographic plots created successfully!\n\n")
+  return(plots)
+}
+
+# Create demographic plots
+demographic_plots <- create_demographic_plots(viz_data)
+
+# ==============================================================================
+# SECTION 5: CROSS-TABULATION AND HEATMAPS
+# ==============================================================================
+
+#' Create cross-tabulation visualizations
+#' 
+#' @param data The outbreak dataset
+#' @return List of cross-tabulation plots
+create_crosstab_plots <- function(data) {
+  cat("=== CREATING CROSS-TABULATION PLOTS ===\n")
+  
+  plots <- list()
+  
+  # 1. Age group by gender heatmap
+  if ("age_group" %in% names(data)) {
+    gender_col <- ifelse("gender" %in% names(data), "gender", 
+                         ifelse("sex" %in% names(data), "sex", NA))
+    
+    if (!is.na(gender_col)) {
+      cat("Creating age group by gender heatmap...\n")
+      
+      crosstab_data <- data %>%
+        filter(!is.na(age_group), !is.na(.data[[gender_col]])) %>%
+        count(age_group, .data[[gender_col]], name = "cases")
+      
+      plots$age_gender_heatmap <- ggplot(crosstab_data, 
+                                         aes(x = age_group, y = .data[[gender_col]], fill = cases)) +
+        geom_tile(color = "white", size = 0.5) +
+        geom_text(aes(label = cases), color = "white", fontface = "bold") +
+        labs(
+          title = "Cases by Age Group and Gender",
+          subtitle = "Heatmap showing distribution across demographics",
+          x = "Age Group",
+          y = "Gender",
+          fill = "Number of Cases"
+        ) +
+        scale_fill_viridis_c() +
+        theme_minimal() +
+        theme(
+          plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+          plot.subtitle = element_text(size = 12, hjust = 0.5),
+          axis.text.x = element_text(angle = 45, hjust = 1),
+          panel.grid = element_blank()
+        )
+    }
+  }
+  
+  # 2. Cases over time by region (if available)
+  if ("region" %in% names(data) || "location" %in% names(data)) {
+    location_col <- ifelse("region" %in% names(data), "region", "location")
+    date_col <- "date_onset"
+    
+    if (!"date_onset" %in% names(data) && "date_reporting" %in% names(data)) {
+      date_col <- "date_reporting"
+    }
+    
+    if (date_col %in% names(data)) {
+      cat("Creating temporal-geographic heatmap...\n")
+      
+      # Create weekly data by region
+      temporal_geo_data <- data %>%
+        filter(!is.na(.data[[date_col]]), !is.na(.data[[location_col]])) %>%
+        mutate(week = floor_date(.data[[date_col]], "week")) %>%
+        count(week, .data[[location_col]], name = "cases")
+      
+      plots$temporal_geo_heatmap <- ggplot(temporal_geo_data, 
+                                           aes(x = week, y = .data[[location_col]], fill = cases)) +
+        geom_tile(color = "white", size = 0.1) +
+        labs(
+          title = "Cases Over Time by Region",
+          subtitle = "Weekly cases distribution across regions",
+          x = "Week",
+          y = "Region",
+          fill = "Weekly Cases"
+        ) +
+        scale_fill_viridis_c(trans = "sqrt") +
+        scale_x_date(date_labels = "%b %Y", date_breaks = "1 month") +
+        theme_minimal() +
+        theme(
+          plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+          plot.subtitle = element_text(size = 12, hjust = 0.5),
+          axis.text.x = element_text(angle = 45, hjust = 1),
+          panel.grid = element_blank()
+        )
+    }
+  }
+  
+  cat("Cross-tabulation plots created successfully!\n\n")
+  return(plots)
+}
+
+# Create cross-tabulation plots
+crosstab_plots <- create_crosstab_plots(viz_data)
+
+# ==============================================================================
+# SECTION 6: ADVANCED VISUALIZATIONS
+# ==============================================================================
+
+#' Create advanced outbreak visualizations
+#' 
+#' @param data The outbreak dataset
+#' @return List of advanced plots
+create_advanced_plots <- function(data) {
+  cat("=== CREATING ADVANCED VISUALIZATIONS ===\n")
+  
+  plots <- list()
+  
+  # 1. Attack rates by demographics
+  if ("age_group" %in% names(data)) {
+    cat("Creating attack rate visualization...\n")
+    
+    # Simulate population data for attack rate calculation
+    # In real analysis, this would come from census or population data
+    pop_data <- data.frame(
+      age_group = c("0-4", "5-14", "15-24", "25-44", "45-64", "65+"),
+      population = c(5000, 8000, 12000, 15000, 10000, 6000)  # Simulated population
+    )
+    
+    attack_rates <- data %>%
+      filter(!is.na(age_group)) %>%
+      count(age_group, name = "cases") %>%
+      left_join(pop_data, by = "age_group") %>%
+      mutate(
+        attack_rate = cases / population * 1000,  # per 1000 population
+        attack_rate_percent = attack_rate / 10
+      )
+    
+    plots$attack_rates <- ggplot(attack_rates, aes(x = age_group, y = attack_rate)) +
+      geom_col(fill = "darkred", alpha = 0.7) +
+      geom_text(aes(label = paste0(round(attack_rate_percent, 1), "%")), 
+                vjust = -0.5, fontface = "bold") +
+      labs(
+        title = "Attack Rates by Age Group",
+        subtitle = "Cases per 1000 population (simulated population data)",
+        x = "Age Group",
+        y = "Attack Rate (per 1000 population)",
+        caption = "Note: Population data is simulated for demonstration"
+      ) +
+      theme_minimal() +
+      theme(
+        plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+        plot.subtitle = element_text(size = 12, hjust = 0.5),
+        axis.text.x = element_text(angle = 45, hjust = 1),
+        panel.grid.minor = element_blank()
+      )
+  }
+  
+  # 2. Case fatality rates (if outcome data available)
+  if ("outcome" %in% names(data)) {
+    cat("Creating case fatality rate visualization...\n")
+    
+    cfr_data <- data %>%
+      filter(!is.na(outcome)) %>%
+      mutate(
+        fatal = ifelse(grepl("death|died|fatal", outcome, ignore.case = TRUE), 1, 0)
+      ) %>%
+      summarise(
+        total_cases = n(),
+        deaths = sum(fatal),
+        cfr = deaths / total_cases * 100
+      )
+    
+    plots$cfr_summary <- ggplot(cfr_data, aes(x = "Overall", y = cfr)) +
+      geom_col(fill = "red", alpha = 0.7, width = 0.5) +
+      geom_text(aes(label = paste0(round(cfr, 1), "%\n(", deaths, "/", total_cases, ")")), 
+                vjust = -0.5, fontface = "bold", size = 5) +
+      labs(
+        title = "Case Fatality Rate",
+        subtitle = "Proportion of cases resulting in death",
+        y = "Case Fatality Rate (%)",
+        x = ""
+      ) +
+      theme_minimal() +
+      theme(
+        plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+        plot.subtitle = element_text(size = 12, hjust = 0.5),
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        panel.grid = element_blank()
+      )
+  }
+  
+  # 3. Time series decomposition (if sufficient temporal data)
+  date_col <- ifelse("date_onset" %in% names(data), "date_onset", 
+                     ifelse("date_reporting" %in% names(data), "date_reporting", NA))
+  
+  if (!is.na(date_col) && sum(!is.na(data[[date_col]])) > 30) {
+    cat("Creating time series analysis...\n")
+    
+    # Daily case counts
+    daily_cases <- data %>%
+      filter(!is.na(.data[[date_col]])) %>%
+      count(.data[[date_col]], name = "cases") %>%
+      arrange(.data[[date_col]])
+    
+    # Calculate 7-day moving average
+    daily_cases <- daily_cases %>%
+      mutate(
+        cases_7day_avg = zoo::rollmean(cases, k = 7, fill = NA, align = "right")
+      )
+    
+    plots$time_series <- ggplot(daily_cases, aes(x = .data[[date_col]])) +
+      geom_col(aes(y = cases), alpha = 0.6, fill = "lightblue") +
+      geom_line(aes(y = cases_7day_avg), color = "red", size = 1.2) +
+      labs(
+        title = "Daily Cases with 7-Day Moving Average",
+        subtitle = "Bars show daily cases, red line shows 7-day average",
+        x = "Date",
+        y = "Number of Cases"
+      ) +
+      scale_x_date(date_labels = "%b %d", date_breaks = "1 week") +
+      theme_minimal() +
+      theme(
+        plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+        plot.subtitle = element_text(size = 12, hjust = 0.5),
+        axis.text.x = element_text(angle = 45, hjust = 1),
+        panel.grid.minor = element_blank()
+      )
+  }
+  
+  cat("Advanced plots created successfully!\n\n")
+  return(plots)
+}
+
+# Create advanced plots
+advanced_plots <- create_advanced_plots(viz_data)
+
+# ==============================================================================
+# SECTION 7: SUMMARY DASHBOARD
+# ==============================================================================
+
+#' Create summary dashboard
+#' 
+#' @param data The outbreak dataset
+#' @return Combined dashboard plot
+create_summary_dashboard <- function(data) {
+  cat("=== CREATING SUMMARY DASHBOARD ===\n")
+  
+  # Key statistics
+  total_cases <- nrow(data)
+  date_col <- ifelse("date_onset" %in% names(data), "date_onset", 
+                     ifelse("date_reporting" %in% names(data), "date_reporting", NA))
+  
+  date_range <- if (!is.na(date_col) && sum(!is.na(data[[date_col]])) > 0) {
+    range(data[[date_col]], na.rm = TRUE)
+  } else {
+    c(NA, NA)
+  }
+  
+  # Create summary text plot
+  summary_text <- data.frame(
+    x = 0.5, y = 0.8,
+    label = paste0(
+      "OUTBREAK SUMMARY\n\n",
+      "Total Cases: ", format(total_cases, big.mark = ","), "\n",
+      if (!is.na(date_range[1])) paste0("Date Range: ", date_range[1], " to ", date_range[2], "\n") else "",
+      if ("age" %in% names(data)) paste0("Median Age: ", round(median(data$age, na.rm = TRUE), 1), " years\n") else "",
+      if ("gender" %in% names(data) || "sex" %in% names(data)) {
+        gender_col <- ifelse("gender" %in% names(data), "gender", "sex")
+        gender_dist <- table(data[[gender_col]], useNA = "no")
+        paste0("Gender Distribution:\n",
+               paste(names(gender_dist), ": ", gender_dist, collapse = "\n"))
+      } else ""
+    )
+  )
+  
+  summary_plot <- ggplot(summary_text, aes(x, y, label = label)) +
+    geom_text(size = 4, hjust = 0.5, vjust = 0.5, fontface = "bold") +
+    xlim(0, 1) + ylim(0, 1) +
+    theme_void() +
+    theme(
+      plot.background = element_rect(fill = "lightgray", color = "black"),
+      panel.border = element_rect(color = "black", fill = NA, size = 2)
+    )
+  
+  cat("Summary dashboard created successfully!\n\n")
+  return(summary_plot)
+}
+
+# Create summary dashboard
+summary_dashboard <- create_summary_dashboard(viz_data)
+
+# ==============================================================================
+# SECTION 8: SAVE ALL VISUALIZATIONS
+# ==============================================================================
+
+cat("=== SAVING VISUALIZATIONS ===\n")
+
+# Function to safely save plots
+save_plot_safely <- function(plot, filename, width = 12, height = 8) {
+  if (!is.null(plot)) {
+    tryCatch({
+      ggsave(
+        filename = file.path(outputs_path, paste0(filename, ".png")),
+        plot = plot,
+        width = width,
+        height = height,
+        dpi = 300,
+        bg = "white"
+      )
+      cat("✓ Saved:", filename, ".png\n")
+    }, error = function(e) {
+      cat("✗ Failed to save", filename, ":", e$message, "\n")
+    })
+  }
+}
+
+# Save epidemic curves
+if (length(epicurve_plots) > 0) {
+  save_plot_safely(epicurve_plots$daily_epicurve, "01_daily_epidemic_curve")
+  save_plot_safely(epicurve_plots$weekly_epicurve, "02_weekly_epidemic_curve")
+  save_plot_safely(epicurve_plots$cumulative_epicurve, "03_cumulative_epidemic_curve")
+  if (!is.null(epicurve_plots$gender_epicurve)) {
+    save_plot_safely(epicurve_plots$gender_epicurve, "04_epidemic_curve_by_gender")
+  }
+}
+
+# Save demographic plots
+if (length(demographic_plots) > 0) {
+  save_plot_safely(demographic_plots$age_histogram, "05_age_distribution")
+  save_plot_safely(demographic_plots$age_group_bar, "06_age_groups")
+  save_plot_safely(demographic_plots$gender_bar, "07_gender_distribution")
+  save_plot_safely(demographic_plots$gender_pie, "08_gender_pie_chart")
+  save_plot_safely(demographic_plots$status_bar, "09_case_status_distribution")
+  save_plot_safely(demographic_plots$location_bar, "10_geographic_distribution")
+}
+
+# Save cross-tabulation plots
+if (length(crosstab_plots) > 0) {
+  save_plot_safely(crosstab_plots$age_gender_heatmap, "11_age_gender_heatmap")
+  save_plot_safely(crosstab_plots$temporal_geo_heatmap, "12_temporal_geographic_heatmap")
+}
+
+# Save advanced plots
+if (length(advanced_plots) > 0) {
+  save_plot_safely(advanced_plots$attack_rates, "13_attack_rates")
+  save_plot_safely(advanced_plots$cfr_summary, "14_case_fatality_rate")
+  save_plot_safely(advanced_plots$time_series, "15_time_series_analysis")
+}
+
+# Save summary dashboard
+save_plot_safely(summary_dashboard, "16_summary_dashboard", width = 10, height = 8)
+
+# ==============================================================================
+# SECTION 9: CREATE COMBINED DASHBOARD
+# ==============================================================================
+
+cat("\n=== CREATING COMBINED DASHBOARD ===\n")
+
+# Create a comprehensive dashboard using patchwork
+if (length(epicurve_plots) > 0 && length(demographic_plots) > 0) {
+  tryCatch({
+    # Select key plots for dashboard
+    plots_to_combine <- list()
+    
+    if (!is.null(epicurve_plots$weekly_epicurve)) plots_to_combine[[1]] <- epicurve_plots$weekly_epicurve
+    if (!is.null(demographic_plots$age_group_bar)) plots_to_combine[[2]] <- demographic_plots$age_group_bar
+    if (!is.null(demographic_plots$gender_bar)) plots_to_combine[[3]] <- demographic_plots$gender_bar
+    if (!is.null(crosstab_plots$age_gender_heatmap)) plots_to_combine[[4]] <- crosstab_plots$age_gender_heatmap
+    
+    # Create combined dashboard if we have plots
+    if (length(plots_to_combine) >= 2) {
+      if (length(plots_to_combine) >= 4) {
+        combined_dashboard <- (plots_to_combine[[1]] + plots_to_combine[[2]]) /
+          (plots_to_combine[[3]] + plots_to_combine[[4]])
+      } else {
+        combined_dashboard <- plots_to_combine[[1]] + plots_to_combine[[2]]
+      }
+      
+      combined_dashboard <- combined_dashboard + 
+        plot_annotation(
+          title = "OUTBREAK ANALYTICS DASHBOARD",
+          subtitle = paste("Comprehensive analysis of", nrow(viz_data), "outbreak cases"),
+          caption = paste("Generated on", Sys.Date(), "by Outbreak Analytics Pipeline"),
+          theme = theme(
+            plot.title = element_text(size = 18, face = "bold", hjust = 0.5),
+            plot.subtitle = element_text(size = 14, hjust = 0.5),
+            plot.caption = element_text(size = 10, hjust = 1)
+          )
+        )
+      
+      # Save combined dashboard
+      ggsave(
+        filename = file.path(outputs_path, "00_OUTBREAK_DASHBOARD.png"),
+        plot = combined_dashboard,
+        width = 16,
+        height = 12,
+        dpi = 300,
+        bg = "white"
+      )
+      cat("✓ Combined dashboard saved: 00_OUTBREAK_DASHBOARD.png\n")
+    }
+    
+  }, error = function(e) {
+    cat("✗ Failed to create combined dashboard:", e$message, "\n")
+  })
+}
+
+# ==============================================================================
+# SECTION 10: GENERATE VISUALIZATION REPORT
+# ==============================================================================
+
+cat("\n=== GENERATING VISUALIZATION REPORT ===\n")
+
+# Create visualization summary
+viz_summary <- data.frame(
+  Category = c("Epidemic Curves", "Demographic Plots", "Cross-tabulation", "Advanced Analysis", "Summary"),
+  Count = c(
+    length(epicurve_plots[!sapply(epicurve_plots, is.null)]),
+    length(demographic_plots[!sapply(demographic_plots, is.null)]),
+    length(crosstab_plots[!sapply(crosstab_plots, is.null)]),
+    length(advanced_plots[!sapply(advanced_plots, is.null)]),
+    1
+  ),
+  Description = c(
+    "Daily/weekly epidemic curves, cumulative cases, peak estimation",
+    "Age, gender, status, and geographic distributions",
+    "Demographic cross-tabulations and heatmaps",
+    "Attack rates, time series analysis, case fatality rates",
+    "Overall outbreak summary dashboard"
+  )
+)
+
+# Save visualization report
+report_file <- file.path(here("outputs"), "visualization_report.txt")
+sink(report_file)
+cat("OUTBREAK DATA VISUALIZATION REPORT\n")
+cat("="*50, "\n")
+cat("Generated on:", as.character(Sys.time()), "\n")
+cat("Dataset:", nrow(viz_data), "records with", ncol(viz_data), "variables\n\n")
+
+cat("VISUALIZATION SUMMARY:\n")
+print(viz_summary, row.names = FALSE)
+
+cat("\nFILES CREATED:\n")
+png_files <- list.files(outputs_path, pattern = "*.png", full.names = FALSE)
+for (i in seq_along(png_files)) {
+  cat(sprintf("%2d. %s\n", i, png_files[i]))
+}
+
+cat("\nKEY FINDINGS:\n")
+cat("- Total cases analyzed:", nrow(viz_data), "\n")
+
+if ("age" %in% names(viz_data)) {
+  age_stats <- summary(viz_data$age)
+  cat("- Age range:", paste(range(viz_data$age, na.rm = TRUE), collapse = " to "), "years\n")
+  cat("- Median age:", round(median(viz_data$age, na.rm = TRUE), 1), "years\n")
+}
+
+gender_col <- ifelse("gender" %in% names(viz_data), "gender", 
+                     ifelse("sex" %in% names(viz_data), "sex", NA))
+
+if (!is.na(gender_col)) {
+  gender_dist <- table(viz_data[[gender_col]], useNA = "no")
+  cat("- Gender distribution:", paste(names(gender_dist), ":", gender_dist, collapse = ", "), "\n")
+}
+
+date_col <- ifelse("date_onset" %in% names(viz_data), "date_onset", 
+                   ifelse("date_reporting" %in% names(viz_data), "date_reporting", NA))
+
+if (!is.na(date_col) && sum(!is.na(viz_data[[date_col]])) > 0) {
+  date_range <- range(viz_data[[date_col]], na.rm = TRUE)
+  outbreak_duration <- as.numeric(difftime(date_range[2], date_range[1], units = "days"))
+  cat("- Outbreak duration:", outbreak_duration, "days\n")
+  cat("- Date range:", paste(date_range, collapse = " to "), "\n")
+}
+
+sink()
+cat("Visualization report saved:", report_file, "\n")
+
+# ==============================================================================
+# SECTION 11: CREATE INTERACTIVE VISUALIZATIONS (OPTIONAL)
+# ==============================================================================
+
+cat("\n=== CREATING INTERACTIVE VISUALIZATIONS ===\n")
+
+# Create interactive epidemic curve using plotly
+if (!is.null(epicurve_plots$daily_epicurve)) {
+  tryCatch({
+    interactive_epicurve <- ggplotly(epicurve_plots$daily_epicurve, tooltip = "all")
+    
+    # Save interactive plot
+    htmlwidgets::saveWidget(
+      interactive_epicurve,
+      file = file.path(here("outputs"), "interactive_epidemic_curve.html"),
+      selfcontained = TRUE
+    )
+    cat("✓ Interactive epidemic curve saved: interactive_epidemic_curve.html\n")
+  }, error = function(e) {
+    cat("✗ Failed to create interactive epidemic curve:", e$message, "\n")
+  })
+}
+
+# Create interactive data table
+tryCatch({
+  # Prepare summary table for display
+  summary_table <- viz_data %>%
+    select(any_of(c("case_id", "age", "gender", "sex", "date_onset", "date_reporting", 
+                    "status", "case_type", "region", "location"))) %>%
+    slice_head(n = 1000)  # Limit to first 1000 rows for performance
+  
+  # Create interactive table
+  interactive_table <- DT::datatable(
+    summary_table,
+    options = list(
+      pageLength = 25,
+      scrollX = TRUE,
+      dom = 'Bfrtip',
+      buttons = c('csv', 'excel', 'pdf')
+    ),
+    caption = "Outbreak Case Data (First 1000 records)"
+  )
+  
+  # Save interactive table
+  DT::saveWidget(
+    interactive_table,
+    file = file.path(here("outputs"), "interactive_data_table.html"),
+    selfcontained = TRUE
+  )
+  cat("✓ Interactive data table saved: interactive_data_table.html\n")
+}, error = function(e) {
+  cat("✗ Failed to create interactive data table:", e$message, "\n")
+})
+
+# ==============================================================================
+# FINAL SUMMARY
+# ==============================================================================
+
+cat("\n" + "="*60 + "\n")
+cat("DATA VISUALIZATION COMPLETED SUCCESSFULLY!\n")
+cat("="*60 + "\n")
+
+cat("\nOUTPUT SUMMARY:\n")
+cat("📊 Static Plots: ", length(list.files(outputs_path, pattern = "*.png")), " PNG files\n")
+cat("🌐 Interactive: ", length(list.files(here("outputs"), pattern = "*.html")), " HTML files\n")
+cat("📋 Reports: ", length(list.files(here("outputs"), pattern = "*.txt")), " text reports\n")
+
+cat("\nKEY OUTPUT FILES:\n")
+cat("1. 00_OUTBREAK_DASHBOARD.png - Comprehensive overview dashboard\n")
+cat("2. interactive_epidemic_curve.html - Interactive epidemic curve\n")
+cat("3. interactive_data_table.html - Interactive data explorer\n")
+cat("4. visualization_report.txt - Detailed analysis report\n")
+
+cat("\nNEXT STEPS:\n")
+cat("• Review all visualizations in the outputs/plots/ directory\n")
+cat("• Open interactive HTML files in your web browser\n")
+cat("• Use insights from visualizations for further epidemiological analysis\n")
+cat("• Consider additional statistical modeling based on visual patterns\n")
+
+cat("\n🎉 OUTBREAK ANALYTICS PIPELINE COMPLETED! 🎉\n")
+cat("All scripts have been executed successfully.\n")
+cat("Your GitHub portfolio project is ready for showcase!\n")
+
+# Clean up environment (optional)
+# rm(list = setdiff(ls(), c("viz_data", "validated_data")))
+
+# ==============================================================================
+# END OF SCRIPT
+# ==============================================================================

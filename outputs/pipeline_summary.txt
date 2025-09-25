@@ -1,0 +1,23 @@
+OUTBREAK ANALYTICS PIPELINE SUMMARY REPORT
+============================================================ 
+Generated: 2025-09-25 20:41:40.945685 
+
+DATA SUMMARY:
+- Total records: 500 
+- Total variables: 10 
+- Date range: 2023-01-01 to 2023-06-30 
+
+MISSING DATA:
+- status : 12.2 %
+- gender : 6 %
+- age : 3.2 %
+
+VISUALIZATIONS CREATED:
+- Total plots: 10 
+- Saved to: C:/Users/Amoh/Desktop/outbreak_analysis/outputs/plots 
+
+FILES CREATED:
+- Cleaned data (RDS): C:/Users/Amoh/Desktop/outbreak_analysis/data/processed/cleaned_outbreak_data.rds 
+- Cleaned data (CSV): C:/Users/Amoh/Desktop/outbreak_analysis/data/processed/cleaned_outbreak_data.csv 
+- Validation results: C:/Users/Amoh/Desktop/outbreak_analysis/outputs/validation_results.rds 
+- Plots directory: C:/Users/Amoh/Desktop/outbreak_analysis/outputs/plots 

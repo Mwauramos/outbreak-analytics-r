@@ -1,0 +1,26 @@
+OUTBREAK DATA VALIDATION REPORT
+Generated on: 2025-09-25 17:02:58.97534 
+=== VALIDATION SUMMARY REPORT ===
+Dataset Overview:
+  Total records: 500 
+  Total variables: 10 
+  Tagged variables: 7 
+
+Tagged Variables:
+   id ( integer ): 500 non-missing values
+   date_onset ( Date ): 500 non-missing values
+   date_reporting ( Date ): 500 non-missing values
+   gender ( character ): 470 non-missing values
+   age ( numeric ): 484 non-missing values
+   location ( character ): 500 non-missing values
+   outcome ( character ): 484 non-missing values
+
+Validation Results:
+  ✗ Date sequence issues: 244 
+
+Data Completeness:
+  ✓ All variables have <20% missing data
+
+Overall Assessment:
+  ⚠ ISSUES FOUND: 244 data quality issues detected
+  Consider addressing these issues before proceeding with analysis
