@@ -63,7 +63,7 @@ source('complete_outbreak_pipeline.R')
 ### Summary Dashboard
 ![Summary Dashboard](outputs/plots/10_summary_dashboard.png)
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 outbreak-analytics-r/
@@ -108,7 +108,7 @@ outbreak-analytics-r/
 - Attack rates and epidemiological indicators
 - Interactive dashboards and data tables
 
-## 📈 Analysis Capabilities
+## Analysis Capabilities
 
 - **Temporal Analysis**: Epidemic curves with peak detection
 - **Demographic Analysis**: Age-sex pyramids and distributions  
