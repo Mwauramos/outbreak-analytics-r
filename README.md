@@ -200,9 +200,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## Author
 
 **Amos Mwaura**
-- GitHub: [@Mwauramos](https://github.com/Mwauramos)
-- LinkedIn: [Amos Mwaura](https://linkedin.com/in/amos-mwaura)
-- Email: [contact information]
+- Email: [mwauramos.n@gmail.com]
 
 ## Acknowledgments
 
