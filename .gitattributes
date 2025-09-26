@@ -1,0 +1,6 @@
+*.html linguist-documentation
+   *.js linguist-documentation
+   *.css linguist-documentation
+   outputs/interactive_* linguist-documentation
+   *.R linguist-language=R
+   *.r linguist-language=R
