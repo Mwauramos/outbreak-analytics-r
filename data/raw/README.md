@@ -1,1 +1,1 @@
-# Raw Data\n\nThis folder contains original, unprocessed outbreak data files.
+# This folder contains original, unprocessed outbreak data files.
