@@ -45,8 +45,7 @@ cd outbreak-analytics-r
 2. Open R/RStudio in the project directory
 
 3. Run the complete pipeline:
-```rsource('scripts/complete_outbreak_pipeline.R')
-```
+```rsource('scripts/complete_outbreak_pipeline.R')```
 
 4. Check outputs in the `outputs/` directory
 
